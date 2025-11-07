@@ -11,7 +11,7 @@ alembic==1.12.1
 
 # Async HTTP
 httpx==0.25.1
-aiohttp==3.9.1
+aiohttp==3.12.14
 
 # Task Queue
 celery==5.3.4
