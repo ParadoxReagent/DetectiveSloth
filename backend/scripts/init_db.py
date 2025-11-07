@@ -13,7 +13,10 @@ from app.models import (
     MitreTechnique,
     DetectionTemplate,
     GeneratedQuery,
-    HuntCampaign
+    HuntCampaign,
+    CVE,
+    ThreatActor,
+    IOCEnrichment
 )
 from app.services.mitre_service import MitreAttackService
 from app.services.query_generator import QueryGenerator

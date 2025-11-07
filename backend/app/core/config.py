@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # Threat Intelligence API Keys
     OTX_API_KEY: Optional[str] = None
     VIRUSTOTAL_API_KEY: Optional[str] = None
+    GREYNOISE_API_KEY: Optional[str] = None
 
     # Update Intervals (hours)
     MITRE_UPDATE_INTERVAL: int = 24

@@ -7,6 +7,7 @@ import httpx
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from ..models.threat_intel import ThreatIntel
+from ..models.cve import CVE
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -255,6 +256,8 @@ class ThreatIntelService:
             "otx": await self.ingest_otx_indicators(),
             "urlhaus": await self.ingest_abusech_urlhaus(),
             "threatfox": await self.ingest_abusech_threatfox(),
+            "cisa_kev": await self.ingest_cisa_kev(),
+            "greynoise": await self.ingest_greynoise(),
         }
 
         total = sum(results.values())
@@ -301,3 +304,173 @@ class ThreatIntelService:
         return self.db.query(ThreatIntel).filter(
             ThreatIntel.associated_techniques.contains([technique_id])
         ).all()
+
+    async def ingest_cisa_kev(self) -> int:
+        """Ingest CISA Known Exploited Vulnerabilities (KEV) catalog.
+
+        Returns:
+            Number of CVEs ingested
+        """
+        logger.info("Ingesting CISA KEV catalog")
+
+        url = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+        count = 0
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, timeout=30.0)
+                response.raise_for_status()
+                data = response.json()
+
+                for vuln in data.get("vulnerabilities", []):
+                    cve_id = vuln.get("cveID", "")
+                    if not cve_id:
+                        continue
+
+                    # Parse dates
+                    date_added = vuln.get("dateAdded")
+                    due_date = vuln.get("dueDate")
+
+                    date_added_dt = datetime.fromisoformat(date_added) if date_added else None
+                    due_date_dt = datetime.fromisoformat(due_date) if due_date else None
+
+                    # Build context
+                    context = {
+                        "vulnerability_name": vuln.get("vulnerabilityName"),
+                        "short_description": vuln.get("shortDescription"),
+                        "required_action": vuln.get("requiredAction"),
+                        "known_ransomware_campaign_use": vuln.get("knownRansomwareCampaignUse"),
+                        "notes": vuln.get("notes"),
+                    }
+
+                    # Check if CVE already exists
+                    existing = self.db.query(CVE).filter(CVE.cve_id == cve_id).first()
+
+                    if existing:
+                        # Update existing CVE
+                        existing.last_seen = datetime.utcnow()
+                        existing.context = context
+                        existing.exploited_in_wild = True
+                        existing.added_to_kev = date_added_dt
+                        existing.remediation_deadline = due_date_dt
+                        existing.ransomware_use = vuln.get("knownRansomwareCampaignUse") == "Known"
+                    else:
+                        # Create new CVE entry
+                        new_cve = CVE(
+                            cve_id=cve_id,
+                            description=vuln.get("shortDescription"),
+                            vendor=vuln.get("vendorProject"),
+                            product=vuln.get("product"),
+                            exploited_in_wild=True,
+                            ransomware_use=vuln.get("knownRansomwareCampaignUse") == "Known",
+                            added_to_kev=date_added_dt,
+                            remediation_required=True,
+                            remediation_deadline=due_date_dt,
+                            context=context,
+                            source="cisa_kev",
+                        )
+                        self.db.add(new_cve)
+
+                    count += 1
+
+                self.db.commit()
+                logger.info(f"Successfully ingested {count} CVEs from CISA KEV")
+
+        except Exception as e:
+            logger.error(f"Error ingesting CISA KEV: {e}")
+            self.db.rollback()
+
+        return count
+
+    async def ingest_greynoise(self, classification: str = "malicious") -> int:
+        """Ingest internet scanner IPs from GreyNoise.
+
+        Args:
+            classification: Filter by classification (malicious, benign, unknown)
+
+        Returns:
+            Number of IPs ingested
+        """
+        if not settings.GREYNOISE_API_KEY:
+            logger.warning("GREYNOISE_API_KEY not configured, skipping GreyNoise ingestion")
+            return 0
+
+        logger.info(f"Ingesting GreyNoise IPs with classification: {classification}")
+
+        headers = {"key": settings.GREYNOISE_API_KEY}
+        base_url = "https://api.greynoise.io/v3"
+        count = 0
+
+        try:
+            async with httpx.AsyncClient() as client:
+                # Query for IPs with specified classification
+                url = f"{base_url}/community"
+
+                # Get recent malicious IPs using GNQL
+                gnql_url = f"{base_url}/gnql"
+                query = f"classification:{classification} last_seen:7d"
+
+                params = {
+                    "query": query,
+                    "size": 1000  # Maximum results per request
+                }
+
+                response = await client.get(gnql_url, headers=headers, params=params, timeout=30.0)
+                response.raise_for_status()
+                data = response.json()
+
+                for entry in data.get("data", []):
+                    ip_address = entry.get("ip", "")
+                    if not ip_address:
+                        continue
+
+                    # Extract MITRE techniques from metadata
+                    techniques = []
+                    metadata = entry.get("metadata", {})
+
+                    # Build context
+                    context = {
+                        "classification": entry.get("classification"),
+                        "first_seen": entry.get("first_seen"),
+                        "last_seen": entry.get("last_seen"),
+                        "actor": entry.get("actor"),
+                        "tags": entry.get("tags", []),
+                        "metadata": metadata,
+                        "raw_data": entry.get("raw_data", {}),
+                        "seen": entry.get("seen"),
+                        "spoofable": entry.get("spoofable"),
+                    }
+
+                    # Check if IP already exists
+                    existing = self.db.query(ThreatIntel).filter(
+                        and_(
+                            ThreatIntel.source == "greynoise",
+                            ThreatIntel.ioc_value == ip_address
+                        )
+                    ).first()
+
+                    if existing:
+                        existing.last_seen = datetime.utcnow()
+                        existing.context = context
+                    else:
+                        new_ioc = ThreatIntel(
+                            source="greynoise",
+                            ioc_type="ip",
+                            ioc_value=ip_address,
+                            context=context,
+                            associated_techniques=techniques,
+                            confidence_score=90 if classification == "malicious" else 50,
+                            tags=entry.get("tags", [])
+                        )
+                        self.db.add(new_ioc)
+
+                    count += 1
+
+                self.db.commit()
+                logger.info(f"Successfully ingested {count} IPs from GreyNoise")
+
+        except Exception as e:
+            logger.error(f"Error ingesting GreyNoise data: {e}")
+            self.db.rollback()
+
+        return count
