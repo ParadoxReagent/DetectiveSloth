@@ -37,7 +37,7 @@ httpx-test==0.4.0
 
 # NLP and Text Processing (Phase 2)
 spacy==3.7.2
-transformers==4.35.2
+transformers==4.53.0
 torch==2.1.1
 sentence-transformers==2.2.2
 scikit-learn==1.3.2
