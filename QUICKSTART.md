@@ -4,10 +4,13 @@ Get up and running with the Automated Threat Hunt Generator in 5 minutes!
 
 ## Prerequisites
 
-- Python 3.11+ OR Docker
+- Docker and Docker Compose (Recommended)
+- OR Python 3.11+ and Node.js 18+ for manual installation
 - Git
 
 ## Option 1: Quick Start with Docker (Recommended)
+
+This will start the complete application stack: backend API, frontend web UI, PostgreSQL database, and Redis.
 
 ### 1. Clone and Start
 
@@ -17,23 +20,32 @@ cd DetectiveSloth
 docker-compose up -d
 ```
 
+This starts:
+- **Backend API** on port 8000
+- **Frontend Web UI** on port 3000
+- **PostgreSQL** on port 5432
+- **Redis** on port 6379
+
 ### 2. Initialize Database
 
 ```bash
 docker exec -it threat_hunt_api python scripts/init_db.py
 ```
 
-When prompted, type `y` to download MITRE ATT&CK data.
+When prompted, type `y` to download MITRE ATT&CK data (recommended).
 
-### 3. Access the API
+### 3. Access the Application
 
-Open your browser to: **http://localhost:8000/docs**
+- **Web Interface:** http://localhost:3000
+- **API Documentation:** http://localhost:8000/docs
 
-You now have a fully functional threat hunt generator!
+You now have a fully functional threat hunt generator with a modern web interface!
 
-## Option 2: Local Python Setup
+## Option 2: Local Manual Setup
 
-### 1. Setup Environment
+### Backend Setup
+
+1. **Setup Python environment**
 
 ```bash
 git clone <repository-url>
@@ -47,14 +59,14 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure
+2. **Configure environment**
 
 ```bash
 cp .env.example .env
 # Edit .env if you want to use PostgreSQL, otherwise SQLite will be used
 ```
 
-### 3. Initialize Database
+3. **Initialize database**
 
 ```bash
 python scripts/init_db.py
@@ -62,13 +74,37 @@ python scripts/init_db.py
 
 Type `y` when prompted to download MITRE ATT&CK data.
 
-### 4. Run the API
+4. **Run the API server**
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-Access at: **http://localhost:8000/docs**
+The API will be available at **http://localhost:8000**
+
+### Frontend Setup
+
+1. **Install Node.js dependencies**
+
+```bash
+cd ../frontend
+npm install
+```
+
+2. **Configure environment**
+
+```bash
+cp .env.example .env
+# Edit VITE_API_BASE_URL if needed (default: http://localhost:8000)
+```
+
+3. **Start development server**
+
+```bash
+npm run dev
+```
+
+The web interface will be available at **http://localhost:5173** (Vite default port)
 
 ## Your First Threat Hunt Query
 
@@ -201,12 +237,24 @@ Get API keys:
 - AlienVault OTX: https://otx.alienvault.com/api
 - VirusTotal: https://www.virustotal.com/gui/my-apikey
 
+## Using the Web Interface
+
+Once you have the application running, you can:
+
+1. **View Dashboard**: See real-time statistics, MITRE ATT&CK coverage, and recent activity
+2. **Generate Queries**: Use the interactive query generator to select techniques and platforms
+3. **Manage Campaigns**: Create and track hunt campaigns with findings
+4. **Browse Templates**: Explore the 40+ pre-built query templates
+5. **Initialize Playbooks**: Load pre-built threat actor playbooks for APT29, Lazarus, FIN7, etc.
+6. **Export to SIEM**: Export queries to Splunk, Microsoft Sentinel, or Google Chronicle
+
 ## Next Steps
 
-1. **Add More Templates**: Use `POST /api/queries/templates` to add your own
-2. **Customize Queries**: Edit templates in `backend/app/templates/initial_templates.py`
-3. **Schedule Updates**: Set up Celery for automated feed updates (Phase 2)
-4. **Build UI**: Deploy the web interface (Phase 5)
+1. **Explore Threat Actor Playbooks**: Initialize pre-built playbooks with `POST /api/advanced/playbooks/initialize`
+2. **Add Custom Templates**: Use `POST /api/queries/templates` to add your own detection rules
+3. **Configure EDR Integration**: Set up connections to your EDR platforms
+4. **Enable Team Collaboration**: Share campaigns and add annotations
+5. **Analyze Coverage Gaps**: Use `POST /api/advanced/intelligence/coverage-gaps` to identify missing detections
 
 ## Troubleshooting
 
@@ -245,16 +293,21 @@ ports:
 - **Full Documentation**: See [README.md](README.md)
 - **Project Plan**: See [automated-threat-hunt-generator-plan.md](automated-threat-hunt-generator-plan.md)
 
-## What's Next?
+## What's Included
 
-Check the project plan for upcoming features:
-- Phase 2: Enhanced threat intelligence processing
-- Phase 3: More query templates (100+ techniques)
-- Phase 4: Advanced query generation with ML
-- Phase 5: Web dashboard
-- Phase 6: Direct EDR integration
-- Phase 7: MCP server for Claude
+This project includes all completed phases:
+
+- ✅ **Phase 1**: Foundation & Architecture
+- ✅ **Phase 2**: Intelligence Processing (NLP, IOC Enrichment, CVE Correlation)
+- ✅ **Phase 3**: Query Template Development (40+ templates)
+- ✅ **Phase 4**: Advanced Query Generation
+- ✅ **Phase 5**: Web Interface & Dashboard
+- ✅ **Phase 6**: Advanced Features (Playbooks, EDR Integration, SIEM Export, Collaboration)
+
+**Upcoming**: Phase 7 - MCP Server for Claude Integration
+
+See [automated-threat-hunt-generator-plan.md](automated-threat-hunt-generator-plan.md) for the complete roadmap.
 
 ---
 
-**Ready to hunt threats? Start generating queries!** 🎯
+**Ready to hunt threats? Start with the web interface at http://localhost:3000** 🎯
