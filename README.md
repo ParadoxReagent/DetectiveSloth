@@ -13,9 +13,9 @@ The Automated Threat Hunt Generator is a system that automatically generates thr
 
 ## Features
 
-### Phase 1 (Current) - Foundation & Architecture
+### Phase 1 - Foundation & Architecture ✅ COMPLETED
 
-✅ **Core Components Implemented:**
+**Core Components:**
 - MITRE ATT&CK integration with automatic updates
 - Threat intelligence ingestion from multiple feeds
 - Query generation engine with Jinja2 templates
@@ -29,10 +29,22 @@ The Automated Threat Hunt Generator is a system that automatically generates thr
 - Carbon Black Cloud
 - SentinelOne Deep Visibility
 
-**Threat Intelligence Sources:**
-- AlienVault OTX
-- URLhaus (Abuse.ch)
-- ThreatFox (Abuse.ch)
+### Phase 2 - Intelligence Processing ✅ COMPLETED
+
+**Advanced Intelligence Features:**
+- IOC enrichment with multi-factor risk scoring (prevalence, recency, credibility)
+- Automated deduplication across threat feeds
+- NLP-based TTP extraction from unstructured text (4 extraction methods)
+- CVE correlation with exploit activity and MITRE techniques
+- Threat actor profiling and TTP aggregation
+- Intelligence scoring and prioritization system
+
+**Enhanced Threat Intelligence Sources:**
+- AlienVault OTX (community threat intelligence)
+- URLhaus (Abuse.ch - malicious URLs)
+- ThreatFox (Abuse.ch - multi-IOC types)
+- CISA Known Exploited Vulnerabilities (KEV catalog)
+- GreyNoise (internet scanner detection)
 
 ## Quick Start
 
@@ -101,6 +113,8 @@ curl -X POST http://localhost:8000/api/threat-intel/update
 curl -X POST http://localhost:8000/api/threat-intel/update/otx
 curl -X POST http://localhost:8000/api/threat-intel/update/urlhaus
 curl -X POST http://localhost:8000/api/threat-intel/update/threatfox
+curl -X POST http://localhost:8000/api/threat-intel/update/cisa-kev
+curl -X POST http://localhost:8000/api/threat-intel/update/greynoise
 ```
 
 ### 3. Generate Threat Hunting Queries
@@ -170,6 +184,36 @@ curl -X POST http://localhost:8000/api/campaigns \
 - `PATCH /api/campaigns/{id}` - Update campaign
 - `DELETE /api/campaigns/{id}` - Delete campaign
 
+### Intelligence Enrichment (Phase 2)
+- `POST /api/enrichment/ioc` - Enrich single IOC
+- `POST /api/enrichment/bulk` - Bulk IOC enrichment
+- `POST /api/enrichment/deduplicate` - Remove duplicate IOCs
+- `GET /api/enrichment/top-iocs` - Get highest risk IOCs
+- `POST /api/enrichment/extract-ttps` - Extract TTPs from text
+- `POST /api/enrichment/analyze-report` - Analyze threat report
+- `POST /api/enrichment/enrich-with-ttps/{ioc}` - TTP enrichment for IOC
+
+### CVE Management (Phase 2)
+- `GET /api/cves` - List CVEs with filters
+- `GET /api/cves/{cve_id}` - Get CVE details
+- `POST /api/cves/correlate` - Correlate CVE with exploits
+- `POST /api/cves/correlate-all` - Bulk CVE correlation
+- `POST /api/cves/enrich` - Enrich CVE from NVD
+- `GET /api/cves/high-risk` - Get high-risk CVEs
+- `GET /api/cves/by-technique/{id}` - CVEs by MITRE technique
+- `GET /api/cves/remediation-required` - CVEs needing remediation
+
+### Threat Actor Profiling (Phase 2)
+- `POST /api/threat-actors` - Create/update threat actor
+- `GET /api/threat-actors` - List threat actors
+- `GET /api/threat-actors/{name}` - Get actor details
+- `POST /api/threat-actors/build-profile` - Build profile from IOCs
+- `GET /api/threat-actors/active/recent` - Recently active actors
+- `GET /api/threat-actors/by-technique/{id}` - Actors using technique
+- `GET /api/threat-actors/by-sector/{sector}` - Actors targeting sector
+- `POST /api/threat-actors/compare` - Compare two actors
+- `GET /api/threat-actors/{name}/report` - Generate intelligence report
+
 ## Database Schema
 
 ```sql
@@ -187,6 +231,19 @@ generated_queries (id, technique_ids[], platform, query_text, metadata, created_
 
 -- Hunt campaigns
 hunt_campaigns (id, name, description, techniques[], threat_actor, status, findings, ...)
+
+-- CVE tracking (Phase 2)
+cves (id, cve_id, description, cvss_score, severity, exploited_in_wild, ransomware_use,
+      associated_techniques[], remediation_deadline, ...)
+
+-- Threat actor profiles (Phase 2)
+threat_actors (id, name, aliases[], actor_type, motivation, techniques[], tactics[],
+               targeted_sectors[], targeted_countries[], ...)
+
+-- IOC enrichment (Phase 2)
+ioc_enrichments (id, ioc_value, ioc_type, risk_score, prevalence_score, recency_score,
+                 source_credibility_score, threat_families[], threat_actors[],
+                 extracted_ttps[], ...)
 ```
 
 ## Configuration
@@ -202,6 +259,7 @@ DATABASE_URL=postgresql://user:password@localhost:5432/threat_hunt_db
 # Threat Intel API Keys
 OTX_API_KEY=your-otx-api-key
 VIRUSTOTAL_API_KEY=your-vt-api-key  # Optional
+GREYNOISE_API_KEY=your-greynoise-api-key  # Optional (Phase 2)
 
 # Update Intervals (hours)
 MITRE_UPDATE_INTERVAL=24
@@ -298,7 +356,7 @@ pytest tests/
 ## Roadmap
 
 - [x] Phase 1: Foundation & Architecture
-- [ ] Phase 2: Intelligence Processing (Enhanced NLP)
+- [x] Phase 2: Intelligence Processing (Enhanced NLP, IOC Enrichment, CVE Correlation, Threat Actor Profiling)
 - [ ] Phase 3: Additional Query Templates
 - [ ] Phase 4: Advanced Query Generation
 - [ ] Phase 5: Web UI
@@ -306,6 +364,7 @@ pytest tests/
 - [ ] Phase 7: MCP Server for Claude Integration
 
 See [automated-threat-hunt-generator-plan.md](automated-threat-hunt-generator-plan.md) for detailed roadmap.
+See [PHASE2_COMPLETE.md](PHASE2_COMPLETE.md) for Phase 2 details.
 
 ## Contributing
 

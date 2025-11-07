@@ -124,3 +124,39 @@ async def update_threatfox(db: Session = Depends(get_db)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update ThreatFox: {str(e)}")
+
+
+@router.post("/update/cisa-kev")
+async def update_cisa_kev(db: Session = Depends(get_db)):
+    """Update CVEs from CISA Known Exploited Vulnerabilities catalog."""
+    service = ThreatIntelService(db)
+
+    try:
+        count = await service.ingest_cisa_kev()
+        return {
+            "success": True,
+            "message": f"Successfully ingested {count} CVEs from CISA KEV",
+            "count": count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update CISA KEV: {str(e)}")
+
+
+@router.post("/update/greynoise")
+async def update_greynoise(classification: str = "malicious", db: Session = Depends(get_db)):
+    """Update IPs from GreyNoise.
+
+    Args:
+        classification: Filter by classification (malicious, benign, unknown)
+    """
+    service = ThreatIntelService(db)
+
+    try:
+        count = await service.ingest_greynoise(classification=classification)
+        return {
+            "success": True,
+            "message": f"Successfully ingested {count} IPs from GreyNoise",
+            "count": count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update GreyNoise: {str(e)}")

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from .core.config import settings
 from .core.database import engine, get_db, Base
-from .api import techniques, queries, threat_intel, campaigns
+from .api import techniques, queries, threat_intel, campaigns, enrichment, cves, threat_actors
 
 # Configure logging
 logging.basicConfig(
@@ -42,6 +42,9 @@ app.include_router(techniques.router, prefix="/api/techniques", tags=["technique
 app.include_router(queries.router, prefix="/api/queries", tags=["queries"])
 app.include_router(threat_intel.router, prefix="/api/threat-intel", tags=["threat-intel"])
 app.include_router(campaigns.router, prefix="/api/campaigns", tags=["campaigns"])
+app.include_router(enrichment.router)  # Already has prefix
+app.include_router(cves.router)  # Already has prefix
+app.include_router(threat_actors.router)  # Already has prefix
 
 
 @app.get("/")
