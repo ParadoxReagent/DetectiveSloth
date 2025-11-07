@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from .core.config import settings
 from .core.database import engine, get_db, Base
-from .api import techniques, queries, threat_intel, campaigns, enrichment, cves, threat_actors, enhanced_queries, dashboard
+from .api import techniques, queries, threat_intel, campaigns, enrichment, cves, threat_actors, enhanced_queries, dashboard, advanced_features
 
 # Configure logging
 logging.basicConfig(
@@ -47,6 +47,7 @@ app.include_router(enrichment.router)  # Already has prefix
 app.include_router(cves.router)  # Already has prefix
 app.include_router(threat_actors.router)  # Already has prefix
 app.include_router(dashboard.router, tags=["dashboard"])
+app.include_router(advanced_features.router)  # Phase 6: Advanced Features
 
 
 @app.get("/")
