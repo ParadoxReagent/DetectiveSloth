@@ -21,6 +21,7 @@ from app.models import (
 from app.services.mitre_service import MitreAttackService
 from app.services.query_generator import QueryGenerator
 from app.templates import get_initial_templates
+from app.templates.phase3_templates import get_phase3_templates
 
 
 def init_database():
@@ -32,15 +33,23 @@ def init_database():
 
 def seed_templates():
     """Seed database with initial query templates."""
-    print("\nSeeding initial query templates...")
+    print("\nSeeding query templates...")
 
     db = SessionLocal()
     try:
         generator = QueryGenerator(db)
-        templates = get_initial_templates()
+
+        # Load both Phase 1 and Phase 3 templates
+        print("  Loading Phase 1 templates...")
+        phase1_templates = get_initial_templates()
+        print("  Loading Phase 3 templates...")
+        phase3_templates = get_phase3_templates()
+
+        all_templates = phase1_templates + phase3_templates
+        print(f"  Total templates to process: {len(all_templates)}")
 
         count = 0
-        for template_data in templates:
+        for template_data in all_templates:
             technique_id, platform, query_template, variables, confidence, fp_notes, data_sources = template_data
 
             # Check if template already exists
@@ -50,7 +59,6 @@ def seed_templates():
             ).first()
 
             if existing:
-                print(f"  - Template for {technique_id} on {platform} already exists, skipping")
                 continue
 
             generator.add_template(
@@ -66,7 +74,7 @@ def seed_templates():
             count += 1
             print(f"  ✓ Added template: {technique_id} ({platform})")
 
-        print(f"✓ Seeded {count} query templates")
+        print(f"✓ Seeded {count} new query templates (Total: {len(all_templates)})")
 
     finally:
         db.close()
