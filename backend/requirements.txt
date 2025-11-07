@@ -1,0 +1,41 @@
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# Async HTTP
+httpx==0.25.1
+aiohttp==3.9.1
+
+# Task Queue
+celery==5.3.4
+redis==5.0.1
+
+# MITRE ATT&CK
+mitreattack-python==3.0.5
+stix2==3.0.1
+taxii2-client==2.3.0
+
+# Template Engine
+jinja2==3.1.2
+
+# Utilities
+python-dotenv==1.0.0
+pytz==2023.3
+python-dateutil==2.8.2
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx-test==0.4.0
+
+# Development
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
