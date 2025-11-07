@@ -82,6 +82,29 @@ The Automated Threat Hunt Generator is a system that automatically generates thr
 - Activity feed with recent system events
 - Coverage analytics and statistics
 
+### Phase 6 - Advanced Features ✅ COMPLETED
+
+**Intelligence-Driven Features:**
+- Hypothesis generation and hunt sequencing based on kill chain progression
+- Detection coverage gap analysis across MITRE ATT&CK tactics
+- Related technique suggestions with confidence scoring
+- Pre-built threat actor playbooks (APT29, Lazarus, FIN7, APT28, Emotet)
+- Query optimization and performance analysis
+
+**Integration Capabilities:**
+- EDR platform integration framework (Defender, CrowdStrike, Carbon Black, SentinelOne)
+- SIEM export (Splunk SPL, Microsoft Sentinel KQL, Google Chronicle YARA-L)
+- SOAR playbook generation (Splunk Phantom, Palo Alto XSOAR)
+- Automated ticketing integration framework
+- Query execution and result collection
+
+**Collaboration Tools:**
+- Campaign sharing with permission management
+- Query and campaign annotation system
+- Hunt effectiveness tracking and metrics
+- Team collaboration activity dashboard
+- Finding management with severity classification
+
 ## Quick Start
 
 ### Using Docker (Recommended)
@@ -290,6 +313,42 @@ curl -X POST http://localhost:8000/api/campaigns \
 - `POST /api/threat-actors/compare` - Compare two actors
 - `GET /api/threat-actors/{name}/report` - Generate intelligence report
 
+### Advanced Features (Phase 6)
+
+**Intelligence & Hypothesis:**
+- `POST /api/advanced/intelligence/related-techniques` - Get related techniques
+- `POST /api/advanced/intelligence/hunt-sequence` - Get recommended hunt sequence
+- `POST /api/advanced/intelligence/coverage-gaps` - Identify detection gaps
+- `POST /api/advanced/intelligence/hypothesis` - Generate hunting hypothesis
+
+**Threat Actor Playbooks:**
+- `POST /api/advanced/playbooks/initialize` - Initialize pre-built playbooks
+- `GET /api/advanced/playbooks/` - List all playbooks
+- `GET /api/advanced/playbooks/{threat_actor}` - Get specific playbook
+- `POST /api/advanced/playbooks/execute` - Execute threat actor playbook
+
+**Query Optimization:**
+- `GET /api/advanced/optimization/query/{query_id}` - Analyze query performance
+- `GET /api/advanced/optimization/indexes/{platform}` - Get index suggestions
+- `POST /api/advanced/optimization/combine` - Combine related queries
+
+**EDR Integration:**
+- `POST /api/advanced/edr/configure` - Configure EDR platform
+- `POST /api/advanced/edr/execute` - Execute query on EDR
+- `POST /api/advanced/edr/bulk-execute` - Bulk execute queries
+
+**SIEM/SOAR Export:**
+- `POST /api/advanced/export/splunk` - Export to Splunk
+- `POST /api/advanced/export/sentinel` - Export to Microsoft Sentinel
+- `POST /api/advanced/export/chronicle` - Export to Google Chronicle
+- `POST /api/advanced/soar/playbook` - Create SOAR playbook
+
+**Collaboration:**
+- `POST /api/advanced/collaboration/share` - Share campaign with team
+- `POST /api/advanced/annotations/query/{id}` - Add query annotation
+- `POST /api/advanced/annotations/campaign/{id}` - Add campaign annotation
+- `GET /api/advanced/effectiveness/campaign/{id}` - Track campaign effectiveness
+
 ## Database Schema
 
 ```sql
@@ -320,6 +379,16 @@ threat_actors (id, name, aliases[], actor_type, motivation, techniques[], tactic
 ioc_enrichments (id, ioc_value, ioc_type, risk_score, prevalence_score, recency_score,
                  source_credibility_score, threat_families[], threat_actors[],
                  extracted_ttps[], ...)
+
+-- Advanced features (Phase 6)
+threat_actor_playbooks (id, threat_actor, description, techniques[], timeline[], tools[], ...)
+playbook_executions (id, playbook_id, execution_time, findings_count, campaign_id, ...)
+hunt_findings (id, campaign_id, severity, finding_type, affected_hosts[], status, ...)
+query_effectiveness (id, query_id, true_positives, false_positives, precision, ...)
+query_annotations (id, query_id, author, annotation_text, created_at, ...)
+campaign_annotations (id, campaign_id, author, annotation_text, created_at, ...)
+campaign_shares (id, campaign_id, shared_by, shared_with, permission_level, ...)
+edr_executions (id, query_id, platform, status, results[], execution_time, ...)
 ```
 
 ## Configuration
@@ -445,7 +514,7 @@ pytest tests/
 - [x] Phase 3: Query Template Development (40+ templates across all major tactics)
 - [x] Phase 4: Advanced Query Generation (Variations, Hunt Campaigns, Analytic Reasoning)
 - [x] Phase 5: User Interface & API (React Web Application, Dashboard, Query Generator, Campaign Manager)
-- [ ] Phase 6: EDR Integration & SIEM Export
+- [x] Phase 6: Advanced Features (Intelligence-Driven Hunting, EDR Integration, SIEM/SOAR Export, Collaboration)
 - [ ] Phase 7: MCP Server for Claude Integration
 
 See [automated-threat-hunt-generator-plan.md](automated-threat-hunt-generator-plan.md) for detailed roadmap.
@@ -455,18 +524,23 @@ See [automated-threat-hunt-generator-plan.md](automated-threat-hunt-generator-pl
 - [PHASE2_COMPLETE.md](PHASE2_COMPLETE.md) - Intelligence Processing
 - [PHASE3_PHASE4_FEATURES.md](PHASE3_PHASE4_FEATURES.md) - Query Templates & Generation Logic
 - [PHASE5_COMPLETE.md](PHASE5_COMPLETE.md) - User Interface & API
+- [PHASE6_COMPLETE.md](PHASE6_COMPLETE.md) - Advanced Features
 
 ## Contributing
 
-Contributions welcome! Areas of focus:
+Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+Areas of focus:
 - Additional query templates for more techniques
 - Support for additional EDR platforms
 - Query optimization and false positive reduction
 - Integration with more threat intelligence feeds
+- Frontend UI enhancements
+- Additional threat actor playbooks
 
 ## License
 
-MIT License - See LICENSE file for details
+MIT License - See [LICENSE](LICENSE) file for details
 
 ## Security Note
 
