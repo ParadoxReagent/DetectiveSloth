@@ -46,15 +46,45 @@ The Automated Threat Hunt Generator is a system that automatically generates thr
 - CISA Known Exploited Vulnerabilities (KEV catalog)
 - GreyNoise (internet scanner detection)
 
+### Phase 3 - Query Template Development ✅ COMPLETED
+
+**Template Library:**
+- 40+ query templates across all major MITRE tactics
+- Multi-platform support (Microsoft Defender, CrowdStrike, Carbon Black, SentinelOne)
+- Coverage for 20+ additional techniques
+- Templates for Process Execution, Persistence, Credential Access, Lateral Movement, Defense Evasion, Discovery, Collection, Exfiltration, and Command & Control
+
+### Phase 4 - Query Generation Logic ✅ COMPLETED
+
+**Advanced Generation Features:**
+- Query variations (broad, balanced, specific) for flexible hunting
+- Hunt campaign generation with multi-technique support
+- Analytic reasoning and hypothesis generation
+- Threat actor context integration
+- Recommended hunt sequences based on attack progression
+- Investigation guidance and related technique suggestions
+
+### Phase 5 - User Interface & API ✅ COMPLETED
+
+**Web Application:**
+- Modern React-based UI with TypeScript and Tailwind CSS
+- Dashboard with real-time statistics and MITRE ATT&CK coverage visualization
+- Interactive query generator with technique selection and multi-platform support
+- Hunt campaign manager with status tracking and findings documentation
+- Template browser with filtering, search, and detailed metadata
+- Docker deployment with Nginx reverse proxy
+
+**User Interface Features:**
+- Real-time threat intelligence monitoring
+- Multi-platform query generation interface with copy/download
+- Campaign creation, tracking, and management
+- Template browsing and exploration by technique
+- Activity feed with recent system events
+- Coverage analytics and statistics
+
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.11 or higher
-- PostgreSQL (or SQLite for development)
-- Git
-
-### Installation
+### Using Docker (Recommended)
 
 1. **Clone the repository**
 ```bash
@@ -62,7 +92,27 @@ git clone <repository-url>
 cd DetectiveSloth
 ```
 
-2. **Set up Python environment**
+2. **Start all services**
+```bash
+docker-compose up --build
+```
+
+Services will be available at:
+- **Frontend (Web UI):** `http://localhost:3000`
+- **Backend API:** `http://localhost:8000`
+- **API Documentation:** `http://localhost:8000/docs`
+
+### Manual Installation
+
+**Prerequisites:**
+- Python 3.11 or higher
+- Node.js 18 or higher
+- PostgreSQL (or SQLite for development)
+- Git
+
+**Backend Setup:**
+
+1. **Set up Python environment**
 ```bash
 cd backend
 python -m venv venv
@@ -70,13 +120,13 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. **Configure environment**
+2. **Configure environment**
 ```bash
 cp .env.example .env
 # Edit .env with your database credentials and API keys
 ```
 
-4. **Initialize database**
+3. **Initialize database**
 ```bash
 python scripts/init_db.py
 ```
@@ -86,12 +136,33 @@ This will:
 - Seed initial query templates
 - Optionally download MITRE ATT&CK data
 
-5. **Run the API server**
+4. **Run the API server**
 ```bash
 uvicorn app.main:app --reload
 ```
 
 The API will be available at `http://localhost:8000`
+
+**Frontend Setup:**
+
+1. **Install dependencies**
+```bash
+cd frontend
+npm install
+```
+
+2. **Configure environment**
+```bash
+cp .env.example .env
+# Edit VITE_API_BASE_URL if needed (default: http://localhost:8000)
+```
+
+3. **Start development server**
+```bash
+npm run dev
+```
+
+The UI will be available at `http://localhost:3000`
 
 Interactive API documentation: `http://localhost:8000/docs`
 
@@ -158,6 +229,11 @@ curl -X POST http://localhost:8000/api/campaigns \
 ```
 
 ## API Endpoints
+
+### Dashboard (Phase 5)
+- `GET /api/dashboard/statistics` - Get comprehensive dashboard statistics
+- `GET /api/dashboard/mitre-coverage` - Get MITRE ATT&CK coverage analysis
+- `GET /api/dashboard/recent-activity` - Get recent system activity stream
 
 ### Techniques
 - `GET /api/techniques` - List techniques with filters
@@ -314,16 +390,25 @@ The query includes:
 DetectiveSloth/
 ├── backend/
 │   ├── app/
-│   │   ├── api/          # API endpoints
+│   │   ├── api/          # API endpoints (techniques, queries, campaigns, dashboard, etc.)
 │   │   ├── core/         # Config, database
 │   │   ├── models/       # SQLAlchemy models
-│   │   ├── services/     # Business logic
-│   │   └── templates/    # Query templates
+│   │   ├── services/     # Business logic (query generation, threat intel, enrichment)
+│   │   └── templates/    # Query templates (initial + phase3)
 │   ├── scripts/          # Utility scripts
 │   └── tests/            # Test suite
+├── frontend/             # React Web UI (Phase 5)
+│   ├── src/
+│   │   ├── components/   # Reusable UI components
+│   │   ├── pages/        # Route pages (Dashboard, QueryGenerator, Campaigns, Templates)
+│   │   ├── services/     # API client
+│   │   ├── types/        # TypeScript definitions
+│   │   └── utils/        # Helper functions
+│   ├── Dockerfile        # Frontend container
+│   └── nginx.conf        # Nginx configuration
 ├── data/                 # Data files
-├── frontend/             # Web UI (future)
-└── docs/                 # Documentation
+├── docs/                 # Documentation
+└── docker-compose.yml    # Multi-service orchestration
 ```
 
 ### Adding New Templates
@@ -357,14 +442,19 @@ pytest tests/
 
 - [x] Phase 1: Foundation & Architecture
 - [x] Phase 2: Intelligence Processing (Enhanced NLP, IOC Enrichment, CVE Correlation, Threat Actor Profiling)
-- [ ] Phase 3: Additional Query Templates
-- [ ] Phase 4: Advanced Query Generation
-- [ ] Phase 5: Web UI
+- [x] Phase 3: Query Template Development (40+ templates across all major tactics)
+- [x] Phase 4: Advanced Query Generation (Variations, Hunt Campaigns, Analytic Reasoning)
+- [x] Phase 5: User Interface & API (React Web Application, Dashboard, Query Generator, Campaign Manager)
 - [ ] Phase 6: EDR Integration & SIEM Export
 - [ ] Phase 7: MCP Server for Claude Integration
 
 See [automated-threat-hunt-generator-plan.md](automated-threat-hunt-generator-plan.md) for detailed roadmap.
-See [PHASE2_COMPLETE.md](PHASE2_COMPLETE.md) for Phase 2 details.
+
+**Phase Documentation:**
+- [PHASE1_COMPLETE.md](PHASE1_COMPLETE.md) - Foundation & Architecture
+- [PHASE2_COMPLETE.md](PHASE2_COMPLETE.md) - Intelligence Processing
+- [PHASE3_PHASE4_FEATURES.md](PHASE3_PHASE4_FEATURES.md) - Query Templates & Generation Logic
+- [PHASE5_COMPLETE.md](PHASE5_COMPLETE.md) - User Interface & API
 
 ## Contributing
 
