@@ -2,10 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel
+from celery.result import AsyncResult
 from ..core.database import get_db
 from ..services.cve_correlation_service import CVECorrelationService
+from ..tasks.enrichment_tasks import correlate_all_cves_task, enrich_cve_task
 
 router = APIRouter(prefix="/api/cves", tags=["cves"])
 
@@ -18,6 +20,20 @@ class CorrelateCVERequest(BaseModel):
 class EnrichCVERequest(BaseModel):
     """Request to enrich CVE from NVD."""
     cve_id: str
+
+
+class TaskResponse(BaseModel):
+    """Response for background task operations."""
+    task_id: str
+    status: str
+    message: str
+
+
+class TaskStatusResponse(BaseModel):
+    """Response for task status check."""
+    task_id: str
+    status: str
+    result: Optional[Dict] = None
 
 
 @router.get("/")
@@ -99,32 +115,51 @@ async def correlate_cve(request: CorrelateCVERequest, db: Session = Depends(get_
     return results
 
 
-@router.post("/correlate-all")
-async def correlate_all_cves(limit: Optional[int] = None, db: Session = Depends(get_db)):
-    """Correlate all CVEs with exploits and techniques."""
-    service = CVECorrelationService(db)
-    count = await service.correlate_all_cves(limit=limit)
+@router.post("/correlate-all", response_model=TaskResponse)
+async def correlate_all_cves(limit: Optional[int] = None):
+    """Correlate all CVEs with exploits and techniques (async background task)."""
+    try:
+        task = correlate_all_cves_task.delay(limit=limit)
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message=f"CVE correlation started. Use /api/cves/tasks/{task.id} to check status."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start correlation task: {str(e)}")
 
-    return {
-        "status": "completed",
-        "cves_correlated": count,
-        "message": f"Successfully correlated {count} CVEs"
-    }
+
+@router.post("/enrich", response_model=TaskResponse)
+async def enrich_cve_from_nvd(request: EnrichCVERequest):
+    """Enrich CVE data from NVD API (async background task)."""
+    try:
+        task = enrich_cve_task.delay(cve_id=request.cve_id)
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message=f"CVE enrichment started for {request.cve_id}. Use /api/cves/tasks/{task.id} to check status."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start enrichment task: {str(e)}")
 
 
-@router.post("/enrich")
-async def enrich_cve_from_nvd(request: EnrichCVERequest, db: Session = Depends(get_db)):
-    """Enrich CVE data from NVD API."""
-    service = CVECorrelationService(db)
-    success = await service.enrich_cve_from_nvd(request.cve_id)
+@router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(task_id: str):
+    """Get the status of a background task."""
+    try:
+        task_result = AsyncResult(task_id)
 
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to enrich CVE from NVD")
+        response = TaskStatusResponse(
+            task_id=task_id,
+            status=task_result.status.lower(),
+            result=task_result.result if task_result.ready() else None
+        )
 
-    return {
-        "status": "success",
-        "message": f"Successfully enriched {request.cve_id} from NVD"
-    }
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get task status: {str(e)}")
+
+
 
 
 @router.get("/high-risk")

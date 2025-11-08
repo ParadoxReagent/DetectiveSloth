@@ -2,11 +2,13 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel
+from celery.result import AsyncResult
 from ..core.database import get_db
 from ..services.enrichment_service import EnrichmentService
 from ..services.ttp_extraction_service import TTPExtractionService
+from ..tasks.enrichment_tasks import deduplicate_iocs_task
 
 router = APIRouter(prefix="/api/enrichment", tags=["enrichment"])
 
@@ -20,6 +22,20 @@ class EnrichIOCRequest(BaseModel):
 class BulkEnrichRequest(BaseModel):
     """Request to enrich multiple IOCs."""
     limit: Optional[int] = None
+
+
+class TaskResponse(BaseModel):
+    """Response for background task operations."""
+    task_id: str
+    status: str
+    message: str
+
+
+class TaskStatusResponse(BaseModel):
+    """Response for task status check."""
+    task_id: str
+    status: str
+    result: Optional[Dict] = None
 
 
 class ExtractTTPsRequest(BaseModel):
@@ -75,17 +91,35 @@ async def bulk_enrich_iocs(request: BulkEnrichRequest, db: Session = Depends(get
     }
 
 
-@router.post("/deduplicate")
-async def deduplicate_iocs(db: Session = Depends(get_db)):
-    """Remove duplicate IOC entries."""
-    service = EnrichmentService(db)
-    results = service.deduplicate_iocs()
+@router.post("/deduplicate", response_model=TaskResponse)
+async def deduplicate_iocs():
+    """Remove duplicate IOC entries (async background task)."""
+    try:
+        task = deduplicate_iocs_task.delay()
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message=f"IOC deduplication started. Use /api/enrichment/tasks/{task.id} to check status."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start deduplication task: {str(e)}")
 
-    return {
-        "status": "completed",
-        "duplicates_removed": results["duplicates_removed"],
-        "unique_iocs_kept": results["unique_iocs_kept"],
-    }
+
+@router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(task_id: str):
+    """Get the status of a background task."""
+    try:
+        task_result = AsyncResult(task_id)
+
+        response = TaskStatusResponse(
+            task_id=task_id,
+            status=task_result.status.lower(),
+            result=task_result.result if task_result.ready() else None
+        )
+
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get task status: {str(e)}")
 
 
 @router.get("/top-iocs")
