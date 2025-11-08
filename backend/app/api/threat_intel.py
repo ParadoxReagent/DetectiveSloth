@@ -1,12 +1,21 @@
 """Threat intelligence API endpoints."""
 
 from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from celery.result import AsyncResult
 
 from ..core.database import get_db
 from ..services.threat_intel_service import ThreatIntelService
+from ..tasks.threat_intel_tasks import (
+    update_all_feeds_task,
+    update_otx_task,
+    update_urlhaus_task,
+    update_threatfox_task,
+    update_cisa_kev_task,
+    update_greynoise_task
+)
 
 router = APIRouter()
 
@@ -30,6 +39,20 @@ class UpdateResponse(BaseModel):
     success: bool
     message: str
     results: Dict[str, int]
+
+
+class TaskResponse(BaseModel):
+    """Response for background task operations."""
+    task_id: str
+    status: str
+    message: str
+
+
+class TaskStatusResponse(BaseModel):
+    """Response for task status check."""
+    task_id: str
+    status: str
+    result: Optional[Dict] = None
 
 
 @router.get("/recent", response_model=List[IOCResponse])
@@ -60,104 +83,107 @@ async def get_iocs_by_technique(
     return iocs[skip:skip + limit]
 
 
-@router.post("/update", response_model=UpdateResponse)
-async def update_threat_intel(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Update threat intelligence from all feeds."""
-    service = ThreatIntelService(db)
-
+@router.post("/update", response_model=TaskResponse)
+async def update_threat_intel():
+    """Update threat intelligence from all feeds (async background task)."""
     try:
-        results = await service.update_all_feeds()
-        total = sum(results.values())
-
-        return UpdateResponse(
-            success=True,
-            message=f"Successfully updated {total} indicators from {len(results)} feeds",
-            results=results
+        task = update_all_feeds_task.delay()
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message="Threat intelligence update started. Use /api/threat-intel/tasks/{task_id} to check status."
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update threat intel: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start update task: {str(e)}")
 
 
-@router.post("/update/otx")
-async def update_otx(days: int = 7, db: Session = Depends(get_db)):
-    """Update IOCs from AlienVault OTX."""
-    service = ThreatIntelService(db)
-
+@router.post("/update/otx", response_model=TaskResponse)
+async def update_otx(days: int = 7):
+    """Update IOCs from AlienVault OTX (async background task)."""
     try:
-        count = await service.ingest_otx_indicators(days=days)
-        return {
-            "success": True,
-            "message": f"Successfully ingested {count} indicators from OTX",
-            "count": count
-        }
+        task = update_otx_task.delay(days=days)
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message=f"OTX update started. Use /api/threat-intel/tasks/{task.id} to check status."
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update OTX: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start OTX update: {str(e)}")
 
 
-@router.post("/update/urlhaus")
-async def update_urlhaus(db: Session = Depends(get_db)):
-    """Update URLs from URLhaus."""
-    service = ThreatIntelService(db)
-
+@router.post("/update/urlhaus", response_model=TaskResponse)
+async def update_urlhaus():
+    """Update URLs from URLhaus (async background task)."""
     try:
-        count = await service.ingest_abusech_urlhaus()
-        return {
-            "success": True,
-            "message": f"Successfully ingested {count} URLs from URLhaus",
-            "count": count
-        }
+        task = update_urlhaus_task.delay()
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message=f"URLhaus update started. Use /api/threat-intel/tasks/{task.id} to check status."
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update URLhaus: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start URLhaus update: {str(e)}")
 
 
-@router.post("/update/threatfox")
-async def update_threatfox(db: Session = Depends(get_db)):
-    """Update IOCs from ThreatFox."""
-    service = ThreatIntelService(db)
-
+@router.post("/update/threatfox", response_model=TaskResponse)
+async def update_threatfox():
+    """Update IOCs from ThreatFox (async background task)."""
     try:
-        count = await service.ingest_abusech_threatfox()
-        return {
-            "success": True,
-            "message": f"Successfully ingested {count} IOCs from ThreatFox",
-            "count": count
-        }
+        task = update_threatfox_task.delay()
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message=f"ThreatFox update started. Use /api/threat-intel/tasks/{task.id} to check status."
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update ThreatFox: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start ThreatFox update: {str(e)}")
 
 
-@router.post("/update/cisa-kev")
-async def update_cisa_kev(db: Session = Depends(get_db)):
-    """Update CVEs from CISA Known Exploited Vulnerabilities catalog."""
-    service = ThreatIntelService(db)
-
+@router.post("/update/cisa-kev", response_model=TaskResponse)
+async def update_cisa_kev():
+    """Update CVEs from CISA Known Exploited Vulnerabilities catalog (async background task)."""
     try:
-        count = await service.ingest_cisa_kev()
-        return {
-            "success": True,
-            "message": f"Successfully ingested {count} CVEs from CISA KEV",
-            "count": count
-        }
+        task = update_cisa_kev_task.delay()
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message=f"CISA KEV update started. Use /api/threat-intel/tasks/{task.id} to check status."
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update CISA KEV: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start CISA KEV update: {str(e)}")
 
 
-@router.post("/update/greynoise")
-async def update_greynoise(classification: str = "malicious", db: Session = Depends(get_db)):
-    """Update IPs from GreyNoise.
+@router.post("/update/greynoise", response_model=TaskResponse)
+async def update_greynoise(classification: str = "malicious"):
+    """Update IPs from GreyNoise (async background task).
 
     Args:
         classification: Filter by classification (malicious, benign, unknown)
     """
-    service = ThreatIntelService(db)
-
     try:
-        count = await service.ingest_greynoise(classification=classification)
-        return {
-            "success": True,
-            "message": f"Successfully ingested {count} IPs from GreyNoise",
-            "count": count
-        }
+        task = update_greynoise_task.delay(classification=classification)
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message=f"GreyNoise update started. Use /api/threat-intel/tasks/{task.id} to check status."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start GreyNoise update: {str(e)}")
+
+
+@router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(task_id: str):
+    """Get the status of a background task."""
+    try:
+        task_result = AsyncResult(task_id)
+
+        response = TaskStatusResponse(
+            task_id=task_id,
+            status=task_result.status.lower(),
+            result=task_result.result if task_result.ready() else None
+        )
+
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update GreyNoise: {str(e)}")
 
