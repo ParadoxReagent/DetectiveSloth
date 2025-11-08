@@ -1,13 +1,15 @@
 """MITRE ATT&CK techniques API endpoints."""
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from typing import List, Optional, Dict
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from celery.result import AsyncResult
 
 from ..core.database import get_db
 from ..services.mitre_service import MitreAttackService
 from ..models.mitre import MitreTechnique
+from ..tasks.mitre_tasks import update_mitre_attack_task
 
 router = APIRouter()
 
@@ -32,6 +34,20 @@ class UpdateResponse(BaseModel):
     success: bool
     message: str
     count: int
+
+
+class TaskResponse(BaseModel):
+    """Response for background task operations."""
+    task_id: str
+    status: str
+    message: str
+
+
+class TaskStatusResponse(BaseModel):
+    """Response for task status check."""
+    task_id: str
+    status: str
+    result: Optional[Dict] = None
 
 
 @router.get("/", response_model=List[TechniqueResponse])
@@ -77,17 +93,32 @@ async def list_platforms(db: Session = Depends(get_db)):
     return {"platforms": platforms}
 
 
-@router.post("/update", response_model=UpdateResponse)
-async def update_techniques(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Update MITRE ATT&CK techniques from online source."""
-    service = MitreAttackService(db)
-
+@router.post("/update", response_model=TaskResponse)
+async def update_techniques():
+    """Update MITRE ATT&CK techniques from online source (async background task)."""
     try:
-        count = await service.update_attack_data()
-        return UpdateResponse(
-            success=True,
-            message=f"Successfully updated {count} techniques",
-            count=count
+        task = update_mitre_attack_task.delay()
+        return TaskResponse(
+            task_id=task.id,
+            status="processing",
+            message=f"MITRE ATT&CK update started. Use /api/techniques/tasks/{task.id} to check status."
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update techniques: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start update task: {str(e)}")
+
+
+@router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(task_id: str):
+    """Get the status of a background task."""
+    try:
+        task_result = AsyncResult(task_id)
+
+        response = TaskStatusResponse(
+            task_id=task_id,
+            status=task_result.status.lower(),
+            result=task_result.result if task_result.ready() else None
+        )
+
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get task status: {str(e)}")

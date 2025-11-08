@@ -7,41 +7,24 @@ pydantic-settings==2.1.0
 # Database
 sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
-alembic==1.12.1
 
 # Async HTTP
 httpx==0.25.1
-aiohttp==3.12.14
 
 # Task Queue
 celery==5.3.4
 redis==5.0.1
 
 # MITRE ATT&CK
-mitreattack-python==3.0.5
 stix2==3.0.1
-taxii2-client==2.3.0
 
 # Template Engine
 jinja2==3.1.6
-
-# Utilities
-python-dotenv==1.0.0
-pytz==2023.3
-python-dateutil==2.8.2
 
 # Testing
 pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx-test==0.4.0
-
-# NLP and Text Processing (Phase 2)
-spacy==3.7.2
-transformers==4.53.0
-torch==2.8.0
-sentence-transformers==2.2.2
-scikit-learn==1.5.0
-nltk==3.9
 
 # Development
 black==24.3.0
