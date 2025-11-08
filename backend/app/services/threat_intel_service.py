@@ -1921,16 +1921,25 @@ class ThreatIntelService:
         Returns:
             Number of items ingested
         """
+        # Always use the allowed RSS feeds list as baseline
+        allowed_feeds = [
+            "https://www.cisa.gov/uscert/ncas/alerts.xml",
+            "https://www.cisa.gov/uscert/ncas/current-activity.xml",
+            "https://isc.sans.edu/rssfeed.xml",
+            "https://www.bleepingcomputer.com/feed/",
+            "https://krebsonsecurity.com/feed/",
+            "https://threatpost.com/feed/",
+        ]
         if feeds is None:
-            # Default threat intelligence RSS feeds
-            feeds = [
-                "https://www.cisa.gov/uscert/ncas/alerts.xml",
-                "https://www.cisa.gov/uscert/ncas/current-activity.xml",
-                "https://isc.sans.edu/rssfeed.xml",
-                "https://www.bleepingcomputer.com/feed/",
-                "https://krebsonsecurity.com/feed/",
-                "https://threatpost.com/feed/",
-            ]
+            feeds = allowed_feeds
+        else:
+            # Validate user-provided feeds against allowed list
+            invalid_feeds = [url for url in feeds if url not in allowed_feeds]
+            if invalid_feeds:
+                logger.warning(f"Rejected untrusted RSS feed(s): {invalid_feeds}")
+                # Optionally, skip invalid feeds, or raise an error to abort.
+                # For this fix, filter and use only trusted feeds.
+                feeds = [url for url in feeds if url in allowed_feeds]
 
         logger.info(f"Ingesting {len(feeds)} RSS feeds")
         count = 0
