@@ -20,9 +20,30 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-key-change-in-production"
 
     # Threat Intelligence API Keys
+    # Core feeds
     OTX_API_KEY: Optional[str] = None
-    VIRUSTOTAL_API_KEY: Optional[str] = None
     GREYNOISE_API_KEY: Optional[str] = None
+
+    # Sandbox & reputation services
+    VIRUSTOTAL_API_KEY: Optional[str] = None
+    HYBRID_ANALYSIS_API_KEY: Optional[str] = None
+    SHODAN_API_KEY: Optional[str] = None
+    URLSCAN_API_KEY: Optional[str] = None
+
+    # IP & URL reputation
+    ABUSEIPDB_API_KEY: Optional[str] = None
+    PHISHTANK_API_KEY: Optional[str] = None
+    PULSEDIVE_API_KEY: Optional[str] = None
+
+    # Threat intelligence platforms
+    MISP_URL: Optional[str] = None
+    MISP_API_KEY: Optional[str] = None
+    OPENCTI_URL: Optional[str] = None
+    OPENCTI_API_KEY: Optional[str] = None
+
+    # Premium/Commercial (optional)
+    THREATCONNECT_API_KEY: Optional[str] = None
+    RECORDEDFUTURE_API_KEY: Optional[str] = None
 
     # Update Intervals (hours)
     MITRE_UPDATE_INTERVAL: int = 24
