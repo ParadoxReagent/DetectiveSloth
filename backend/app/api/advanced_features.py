@@ -1,6 +1,8 @@
 """Advanced features API endpoints for Phase 6."""
 
 from fastapi import APIRouter, Depends, HTTPException
+
+import logging
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
@@ -314,7 +316,14 @@ def bulk_execute_queries(
 ):
     """Execute multiple queries in bulk."""
     service = EDRIntegrationService(db)
-    return service.bulk_execute(query_ids)
+    try:
+        return service.bulk_execute(query_ids)
+    except Exception as e:
+        logging.error(f"Bulk execute failed: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": "An internal error occurred. Please contact support."
+        }
 
 
 # SIEM/SOAR Export Endpoints
