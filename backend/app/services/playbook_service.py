@@ -390,11 +390,13 @@ class PlaybookService:
             }
 
         except Exception as e:
+            import logging
+            logging.exception("Failed to execute playbook for %s", threat_actor)
             execution.execution_status = "failed"
             execution.completed_at = datetime.utcnow()
             execution.notes = str(e)
             self.db.commit()
-            return {"error": str(e), "execution_id": execution.id}
+            return {"error": "An internal error has occurred.", "execution_id": execution.id}
 
     def get_ttp_timeline(self, threat_actor: str) -> List[Dict]:
         """Get TTP timeline for visualization."""
