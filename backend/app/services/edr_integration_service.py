@@ -163,15 +163,16 @@ class EDRIntegrationService:
             }
 
         except Exception as e:
+            import logging
             execution.execution_status = "failed"
             execution.completed_at = datetime.utcnow()
             execution.error_message = str(e)
             self.db.commit()
-
+            logging.error(f"EDR query execution failed: {e}", exc_info=True)
             return {
                 "success": False,
                 "execution_id": execution_id,
-                "error": str(e)
+                "error": "Internal platform execution error"
             }
 
     def _execute_defender_query(self, query: GeneratedQuery) -> Dict:
